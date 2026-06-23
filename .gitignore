@@ -37,3 +37,6 @@ Thumbs.db
 # Game specific
 *.log
 *.save
+
+# Match reports
+python-poc/matches/*.json
