@@ -46,6 +46,7 @@ game-agent-poc/
 
 - Conda 环境：`ai_use`
 - Python：`3.11+`
+- 关键依赖见 [`environment.yml`](./environment.yml)
 - 当前只需要标准库，后续再按 POC 需要补游戏库和模型库
 
 ## 启动方式

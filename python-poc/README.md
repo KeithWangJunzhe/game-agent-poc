@@ -17,6 +17,7 @@
 ## 约定
 
 - 环境使用 `conda env ai_use`
+- 环境定义见仓库根目录的 [`environment.yml`](../environment.yml)
 - 先写最小可运行版本，再逐步加能力
 - 这里只放 POC 代码，不把端侧模型相关内容先推进进来
 - 推荐从仓库根目录入口 [`run_poc.py`](../run_poc.py) 启动，这样不依赖当前工作目录

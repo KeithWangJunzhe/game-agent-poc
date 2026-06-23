@@ -7,6 +7,7 @@
 - Git
 - Conda
 - Python `3.11+`
+- 本仓库提供的 [`environment.yml`](../environment.yml)
 
 ## 获取代码
 
@@ -17,7 +18,11 @@ cd game-agent-poc
 
 ## 环境
 
-项目默认使用 `conda env ai_use`。
+项目默认使用 `conda env ai_use`。仓库里已经放了最小环境定义，可以直接创建：
+
+```bash
+conda env create -f environment.yml
+```
 
 如果你本机已经有这个环境：
 
@@ -25,7 +30,7 @@ cd game-agent-poc
 conda activate ai_use
 ```
 
-如果没有，可以新建一个同名环境，再安装你习惯的 Python 版本。
+如果你想手动新建同名环境，也可以只保证 Python 3.11 即可。
 
 ## 运行
 
@@ -48,7 +53,7 @@ python -m unittest discover -s tests
 ## 说明
 
 - 这个 POC 当前不依赖第三方 Python 包，主要用标准库
+- `environment.yml` 里只放了最小关键依赖：Python `3.11` 和 `pip`
 - `ollama` 只用于可选的本地模型对局
 - 如果本机没有 `ollama`，仍然可以跑 baseline 和交互模式
 - 报告和 debug trace 都会写到 `python-poc/matches/`
-
