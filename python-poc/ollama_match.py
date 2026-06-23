@@ -2,12 +2,11 @@ from __future__ import annotations
 
 import argparse
 import json
-import re
 import random
-import subprocess
 from pathlib import Path
 from typing import Any, Dict, Iterable, List, Optional
 
+from agent_io import parse_agent_response
 from game_poc import GameEngine, create_default_state, format_state
 from match_report import MatchRecorder
 from baseline_bot import choose_baseline_command as baseline_choose_command
@@ -37,7 +36,9 @@ def build_prompt(
         f"You control player: {controlled_player_id}\n"
         f"Current player: {current_player_id}\n"
         "Return exactly one JSON object and nothing else.\n"
-        "Choose one command from the allowed options.\n\n"
+        "Return a JSON object with keys `command` and `decision_note`.\n"
+        "The `command` value must be one command from the allowed options.\n"
+        "The `decision_note` value should be a short reason for the choice.\n\n"
         "Current state:\n"
         f"{state_text}\n\n"
         "Allowed options:\n"
@@ -57,51 +58,14 @@ def build_match_state() -> tuple[Any, Dict[str, Any]]:
     }
 
 
-def extract_json_object(text: str) -> Optional[Dict[str, Any]]:
-    fenced = re.search(r"```(?:json)?\s*(\{.*?\})\s*```", text, re.DOTALL)
-    if fenced is not None:
-        try:
-            loaded = json.loads(fenced.group(1))
-        except json.JSONDecodeError:
-            loaded = None
-        if isinstance(loaded, dict):
-            return loaded
-
-    starts = [index for index, char in enumerate(text) if char == "{"]
-    for start in reversed(starts):
-        depth = 0
-        for end in range(start, len(text)):
-            char = text[end]
-            if char == "{":
-                depth += 1
-            elif char == "}":
-                depth -= 1
-                if depth == 0:
-                    candidate = text[start : end + 1]
-                    try:
-                        loaded = json.loads(candidate)
-                    except json.JSONDecodeError:
-                        break
-                    if isinstance(loaded, dict):
-                        return loaded
-                    break
-    return None
-
-
-def query_model(model: str, prompt: str) -> Dict[str, Any]:
+def query_model(model: str, prompt: str) -> str:
     completed = run_ollama(model, prompt)
-    output = completed.stdout.strip()
     if completed.returncode != 0:
         raise RuntimeError(
             f"ollama failed with exit code {completed.returncode}: {completed.stderr.strip()} | "
             f"{format_ollama_diagnostics()}"
         )
-    parsed = extract_json_object(output)
-    if parsed is None:
-        raise ValueError(
-            f"model did not return JSON: {output} | {format_ollama_diagnostics()}"
-        )
-    return parsed
+    return completed.stdout.strip()
 
 
 def run_match(model: str, max_turns: int, debug: bool = False) -> None:
@@ -130,6 +94,7 @@ def run_match(model: str, max_turns: int, debug: bool = False) -> None:
             break
 
         current_player = engine.state.current_player_id
+        trace_prompt = None
         if current_player == model_player_id:
             options = build_legal_options(engine, current_player)
             observation = json.dumps(
@@ -143,14 +108,32 @@ def run_match(model: str, max_turns: int, debug: bool = False) -> None:
                 current_player,
                 options,
             )
+            trace_prompt = prompt
+            if debug:
+                print("=== Agent Prompt ===")
+                print(prompt)
             try:
-                command = query_model(model, prompt)
+                raw_output = query_model(model, prompt)
             except Exception as exc:
                 command = {"type": "end_turn"}
+                raw_output = ""
+                decision_note = f"fallback=end_turn; error={exc}"
+                parse_note = "ollama_error"
                 print(f"> model error: {exc}")
+            else:
+                command, decision_note, parse_note = parse_agent_response(raw_output, options)
+                if command is None:
+                    command = {"type": "end_turn"}
+                    decision_note = decision_note or "fallback=end_turn"
+                    parse_note = f"fallback:{parse_note}"
+                elif not decision_note:
+                    decision_note = "no decision_note provided"
             source = "ollama"
         else:
             command = choose_baseline_command(engine, current_player)
+            raw_output = json.dumps(command, ensure_ascii=False)
+            decision_note = "baseline"
+            parse_note = "baseline"
             source = "baseline"
 
         result = engine.apply(command)
@@ -161,10 +144,18 @@ def run_match(model: str, max_turns: int, debug: bool = False) -> None:
                 "message": result.message,
                 "state_changed": result.state_changed,
                 "source": source,
+                "decision_note": decision_note,
+                "prompt": trace_prompt,
+                "raw_output": raw_output,
+                "parse_note": parse_note,
             },
             engine.state,
         )
         print(f"> {source} command={json.dumps(command, ensure_ascii=False)}")
+        if current_player == model_player_id:
+            print(f"  decision_note={decision_note}")
+            if debug and raw_output:
+                print(f"  raw_output={raw_output}")
         print(f"  result={result.ok} | {result.message}")
         print(format_state(engine.state))
         print()

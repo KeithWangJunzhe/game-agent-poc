@@ -25,3 +25,12 @@ python python-poc/analysis/batch_analysis.py /path/to/matches
 ```
 
 可以传单个文件、多个文件，或一个目录。加 `--json` 可输出聚合结果。
+
+## Debug Trace
+
+```bash
+conda activate ai_use
+python python-poc/analysis/debug_trace.py /path/to/match.json
+```
+
+加 `--full` 可以直接展开完整 prompt / raw output。加 `--json` 可以输出结构化 trace。

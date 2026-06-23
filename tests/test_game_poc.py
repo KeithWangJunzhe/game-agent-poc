@@ -12,7 +12,7 @@ if str(POC_DIR) not in sys.path:
 from game_poc import GameEngine, Point, create_default_state
 from baseline_bot import choose_baseline_command
 from match_report import MatchRecorder
-from harness import extract_json_object, parse_and_validate_command
+from harness import extract_json_object, parse_agent_output, parse_and_validate_command
 from analysis.report_tools import aggregate_summaries, summarize_report
 
 
@@ -180,6 +180,17 @@ class GamePocTest(unittest.TestCase):
         )
 
         self.assertEqual(note, "ok")
+        self.assertIsNotNone(command)
+
+    def test_harness_parses_decision_note(self):
+        legal_actions = self.engine.state.legal_actions_for_player("p1")
+        command, decision_note, note = parse_agent_output(
+            "{\"command\":{\"type\":\"move_unit\",\"unit_id\":\"p1_worker\",\"direction\":\"east\"},\"decision_note\":\"move toward resource\"}",
+            legal_actions,
+        )
+
+        self.assertEqual(note, "ok")
+        self.assertEqual(decision_note, "move toward resource")
         self.assertIsNotNone(command)
 
 

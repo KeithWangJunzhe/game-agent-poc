@@ -1,6 +1,6 @@
 # Game Agent POC
 
-这是一个面向游戏 agent 的 Python POC，目标是先跑通最小可玩的策略对局，再逐步补齐 harness 和分析能力。
+这是一个面向游戏 agent 的 Python POC。当前这一版已经完成阶段一目标，作为公开原型保留，后续主要用于方法复用和回看。
 
 核心方向很明确：
 
@@ -10,7 +10,7 @@
 
 ## 当前状态
 
-- 项目骨架已就位，第一版 POC 已开始落地
+- 项目骨架已就位，阶段一 POC 已完成
 - `src/main.py` 负责跳转到 POC runner
 - `python-poc/` 里已经放了核心游戏骨架、对局 harness 和最小分析工具
 
@@ -125,10 +125,12 @@ python -m unittest discover -s tests
 ## 参考背景
 
 - 阶段一计划见 [docs/phase1_plan.md](./docs/phase1_plan.md)
+- 阶段一完成后的后续方案见 [docs/post_poc_plan.md](./docs/post_poc_plan.md)
+- 公开仓库复现说明见 [docs/reproducibility.md](./docs/reproducibility.md)
 - 对局说明见 [python-poc/HOW_TO_PLAY.md](./python-poc/HOW_TO_PLAY.md)
 - Agent 规则摘要见 [python-poc/AGENT_PLAYBOOK.md](./python-poc/AGENT_PLAYBOOK.md)
 - 游戏 POC 的说明和脚本索引见 [python-poc/README.md](./python-poc/README.md)
 
 ## 下一步
 
-接下来进入阶段一：继续优化对局可观测性和 debug trace，再做更细的 agent 分析。
+如果后续要继续推进更复杂的游戏 agent 项目，可以把这里当成方法验证原型和回退点。

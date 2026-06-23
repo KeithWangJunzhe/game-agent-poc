@@ -1,14 +1,15 @@
 # Python POC
 
-这里专门预留给后续的游戏部分 Python POC 实现。
+这里专门预留给游戏部分 Python POC 实现。当前这一版已经完成阶段一目标，后续以维护和复用为主。
 
-当前第一版已经开始落地：
+当前第一版已经落地并可复现：
 
 - `game_poc.py`：游戏状态、单位、资源、引擎
 - `runner.py`：demo 和交互式命令入口
 - `harness.py`：最小自然语言 harness 骨架
 - `baseline_bot.py`：当前最弱可复用 baseline
 - `analysis/`：单局和批量复盘摘要
+- `analysis/debug_trace.py`：按 turn 展示 prompt / output / decision note
 - [How To Play](./HOW_TO_PLAY.md)：给人看的对局说明
 - [Agent Playbook](./AGENT_PLAYBOOK.md)：给 agent 看的规则摘要
 - `matches/`：自动生成的对局复盘 JSON
@@ -24,6 +25,7 @@
 - `run_poc.py --interactive --max-turns 30` 会把手动对局限制到 30 turns
 - `harness.py --agent ollama --max-turns 30 --debug` 会带上 Ollama 诊断信息
 - `ollama_match.py --model gemma4:e2b --max-turns 30 --debug` 是 e2b vs baseline 的诊断版本
+- 需要公开复现说明时请看 [docs/reproducibility.md](../docs/reproducibility.md)
 
 ## 计划放置的内容
 

@@ -3,13 +3,12 @@ from __future__ import annotations
 import argparse
 import json
 import random
-import re
-import subprocess
 from dataclasses import dataclass
 from pathlib import Path
 from typing import Any, Callable, Dict, Iterable, List, Optional, Protocol, Tuple
 
 from baseline_bot import choose_baseline_command
+from agent_io import extract_json_object, parse_agent_response
 from game_poc import GameEngine, GameState, create_default_state, format_state
 from match_report import MatchRecorder
 from ollama_support import format_ollama_diagnostics, run_ollama
@@ -33,38 +32,8 @@ class HarnessTurnResult:
     raw_output: str
     parsed: Optional[Dict[str, Any]]
     note: str
+    decision_note: str
     fallback_used: bool
-
-
-def extract_json_object(text: str) -> Optional[Dict[str, Any]]:
-    fenced = re.search(r"```(?:json)?\s*(\{.*?\})\s*```", text, re.DOTALL)
-    if fenced is not None:
-        try:
-            loaded = json.loads(fenced.group(1))
-        except json.JSONDecodeError:
-            loaded = None
-        if isinstance(loaded, dict):
-            return loaded
-
-    starts = [index for index, char in enumerate(text) if char == "{"]
-    for start in reversed(starts):
-        depth = 0
-        for end in range(start, len(text)):
-            char = text[end]
-            if char == "{":
-                depth += 1
-            elif char == "}":
-                depth -= 1
-                if depth == 0:
-                    candidate = text[start : end + 1]
-                    try:
-                        loaded = json.loads(candidate)
-                    except json.JSONDecodeError:
-                        break
-                    if isinstance(loaded, dict):
-                        return loaded
-                    break
-    return None
 
 
 def _compact_agent_view(observation: Dict[str, Any]) -> Dict[str, Any]:
@@ -90,7 +59,9 @@ def build_natural_language_prompt(state: GameState, controlled_player_id: str) -
         "You are playing a small turn-based strategy game.\n"
         f"You control player: {controlled_player_id}\n"
         "Reply with exactly one JSON object and nothing else.\n"
-        "Choose one command from current_player_legal_actions.\n"
+        "Return a JSON object with keys `command` and `decision_note`.\n"
+        "The `command` value must be one command from current_player_legal_actions.\n"
+        "The `decision_note` value should be a short reason for the choice.\n"
         "If no good action exists, use end_turn.\n\n"
         "If you want to stop the interactive session, type quit.\n\n"
         "Compact observation:\n"
@@ -107,7 +78,9 @@ def build_repair_prompt(
     return (
         "Your previous reply was invalid.\n"
         "Reply again with exactly one JSON object and nothing else.\n"
-        "Use only a command from current_player_legal_actions.\n\n"
+        "Return a JSON object with keys `command` and `decision_note`.\n"
+        "The `command` value must be one command from current_player_legal_actions.\n"
+        "The `decision_note` value should be a short reason for the choice.\n\n"
         "If you want to stop the interactive session, type quit.\n\n"
         f"Invalid reply:\n{raw_output}\n\n"
         "Compact observation:\n"
@@ -119,12 +92,15 @@ def parse_and_validate_command(
     raw_output: str,
     legal_actions: List[Dict[str, Any]],
 ) -> Tuple[Optional[Dict[str, Any]], str]:
-    command = extract_json_object(raw_output)
-    if command is None:
-        return None, "no_json_found"
-    if command not in legal_actions:
-        return None, "command_not_legal"
-    return command, "ok"
+    command, _, note = parse_agent_response(raw_output, legal_actions)
+    return command, note
+
+
+def parse_agent_output(
+    raw_output: str,
+    legal_actions: List[Dict[str, Any]],
+) -> Tuple[Optional[Dict[str, Any]], str, str]:
+    return parse_agent_response(raw_output, legal_actions)
 
 
 def interactive_provider(prompt: str, _: GameState, __: str) -> str:
@@ -192,14 +168,21 @@ def run_episode(
             break
 
         current_player = engine.state.current_player_id
+        trace_prompt = None
+        repair_prompt = None
+        repair_output = None
         if current_player == controlled_player_id:
             prompt = build_natural_language_prompt(engine.state, controlled_player_id)
+            trace_prompt = prompt
+            if debug:
+                print("=== Agent Prompt ===")
+                print(prompt)
             try:
                 raw_output = agent_provider(prompt, engine.state, current_player)
             except AgentExit:
                 break
             legal_actions = engine.state.legal_actions_for_player(current_player)
-            parsed, note = parse_and_validate_command(raw_output, legal_actions)
+            parsed, decision_note, note = parse_agent_output(raw_output, legal_actions)
             fallback_used = False
             if parsed is None:
                 repair_prompt = build_repair_prompt(
@@ -207,8 +190,12 @@ def run_episode(
                     controlled_player_id,
                     raw_output,
                 )
+                if debug:
+                    print("=== Repair Prompt ===")
+                    print(repair_prompt)
                 repaired_output = agent_provider(repair_prompt, engine.state, current_player)
-                repaired, repaired_note = parse_and_validate_command(
+                repair_output = repaired_output
+                repaired, repaired_decision_note, repaired_note = parse_agent_output(
                     repaired_output,
                     legal_actions,
                 )
@@ -216,20 +203,26 @@ def run_episode(
                     parsed = repaired
                     raw_output = repaired_output
                     note = f"repair:{repaired_note}"
+                    decision_note = repaired_decision_note
                 elif fallback_to_baseline:
                     parsed = choose_baseline_command(engine, current_player)
                     fallback_used = True
                     note = f"{note}; fallback=baseline"
+                    decision_note = "fallback=baseline"
                 else:
                     parsed = {"type": "end_turn"}
                     fallback_used = True
                     note = f"{note}; fallback=end_turn"
+                    decision_note = "fallback=end_turn"
+            if parsed is not None and not decision_note:
+                decision_note = "no decision_note provided"
             command = parsed
             source = "agent"
         else:
             command = choose_baseline_command(engine, current_player)
             raw_output = json.dumps(command, ensure_ascii=False)
             note = "baseline"
+            decision_note = "baseline"
             fallback_used = False
             source = "baseline"
 
@@ -241,13 +234,21 @@ def run_episode(
                 "message": result.message,
                 "state_changed": result.state_changed,
                 "source": source,
+                "decision_note": decision_note,
+                "prompt": trace_prompt,
                 "raw_output": raw_output,
+                "repair_prompt": repair_prompt,
+                "repair_output": repair_output,
                 "note": note,
                 "fallback_used": fallback_used,
             },
             engine.state,
         )
         print(f"> {source} command={json.dumps(command, ensure_ascii=False)}")
+        if current_player == controlled_player_id:
+            print(f"  decision_note={decision_note}")
+            if debug:
+                print(f"  raw_output={raw_output}")
         print(f"  result={result.ok} | {result.message}")
         print(format_state(engine.state))
         print()
