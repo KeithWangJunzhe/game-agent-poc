@@ -16,5 +16,5 @@ Reports are generated automatically when a run finishes.
 
 For quick inspection, use:
 
-- [`../analysis/single_match.py`](/Users/keith/Desktop/AI/codex/game-agent-poc/python-poc/analysis/single_match.py)
-- [`../analysis/batch_analysis.py`](/Users/keith/Desktop/AI/codex/game-agent-poc/python-poc/analysis/batch_analysis.py)
+- [`../analysis/single_match.py`](../analysis/single_match.py)
+- [`../analysis/batch_analysis.py`](../analysis/batch_analysis.py)

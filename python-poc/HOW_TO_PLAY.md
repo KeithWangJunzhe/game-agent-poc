@@ -6,21 +6,21 @@
 
 ```bash
 conda activate ai_use
-python /Users/keith/Desktop/AI/codex/game-agent-poc/run_poc.py
+python run_poc.py
 ```
 
 如果想手动下命令，可以直接进入交互模式：
 
 ```bash
 conda activate ai_use
-python /Users/keith/Desktop/AI/codex/game-agent-poc/run_poc.py --interactive
+python run_poc.py --interactive
 ```
 
 也可以先看 demo：
 
 ```bash
 conda activate ai_use
-python /Users/keith/Desktop/AI/codex/game-agent-poc/run_poc.py --demo
+python run_poc.py --demo
 ```
 
 ## 你能看到什么

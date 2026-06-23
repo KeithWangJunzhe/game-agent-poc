@@ -1,6 +1,6 @@
 # Game Agent POC
 
-这是 `codex` 工区里的子项目，目标是做一个先跑通游戏部分的 POC。
+这是一个面向游戏 agent 的 Python POC，目标是先跑通最小可玩的策略对局，再逐步补齐 harness 和分析能力。
 
 核心方向很明确：
 
@@ -12,7 +12,7 @@
 
 - 项目骨架已就位，第一版 POC 已开始落地
 - `src/main.py` 负责跳转到 POC runner
-- `python-poc/` 里已经放了核心游戏骨架
+- `python-poc/` 里已经放了核心游戏骨架、对局 harness 和最小分析工具
 
 ## 贡献者
 
@@ -26,11 +26,15 @@ game-agent-poc/
 ├── README.md              # 项目入口与索引
 ├── CONTRIBUTING.md        # 协作约定
 ├── docs/
+│   ├── phase1_plan.md     # 阶段一计划
 │   └── tech_stack.md      # 当前技术选型记录
 ├── python-poc/            # 预留：Python 游戏 POC 实现
 │   ├── README.md
 │   ├── game_poc.py        # 游戏状态 / 规则 / 引擎
-│   └── runner.py          # demo / 交互入口
+│   ├── runner.py          # demo / 交互入口
+│   ├── harness.py         # 自然语言 harness
+│   ├── ollama_match.py    # e2b vs baseline
+│   └── analysis/          # 单局和批量复盘
 ├── src/
 │   └── main.py            # 启动占位
 ├── tests/
@@ -46,17 +50,17 @@ game-agent-poc/
 
 ## 启动方式
 
-从任何目录都可以直接跑绝对路径：
+从任何目录都可以直接跑仓库根入口：
 
 ```bash
 conda activate ai_use
-python /Users/keith/Desktop/AI/codex/game-agent-poc/run_poc.py --interactive --max-turns 30
+python run_poc.py --interactive --max-turns 30
 ```
 
 如果你已经在项目目录里，也可以这样：
 
 ```bash
-cd /Users/keith/Desktop/AI/codex/game-agent-poc
+cd /path/to/game-agent-poc
 conda activate ai_use
 python src/main.py
 ```
@@ -64,7 +68,7 @@ python src/main.py
 也可以直接跑 POC 入口：
 
 ```bash
-cd /Users/keith/Desktop/AI/codex/game-agent-poc
+cd /path/to/game-agent-poc
 conda activate ai_use
 python python-poc/runner.py
 ```
@@ -73,42 +77,42 @@ python python-poc/runner.py
 
 ```bash
 conda activate ai_use
-python /Users/keith/Desktop/AI/codex/game-agent-poc/python-poc/ollama_match.py --model gemma4:e2b --max-turns 30
+python python-poc/ollama_match.py --model gemma4:e2b --max-turns 30
 ```
 
 如果要看带诊断信息的 debug 版本：
 
 ```bash
 conda activate ai_use
-python /Users/keith/Desktop/AI/codex/game-agent-poc/python-poc/ollama_match.py --model gemma4:e2b --max-turns 30 --debug
+python python-poc/ollama_match.py --model gemma4:e2b --max-turns 30 --debug
 ```
 
 如果只想跑纯 baseline：
 
 ```bash
 conda activate ai_use
-python /Users/keith/Desktop/AI/codex/game-agent-poc/python-poc/baseline_bot.py --demo
+python python-poc/baseline_bot.py --demo
 ```
 
 如果要试最小自然语言 harness：
 
 ```bash
 conda activate ai_use
-python /Users/keith/Desktop/AI/codex/game-agent-poc/python-poc/harness.py
+python python-poc/harness.py
 ```
 
 如果想手动输入回复：
 
 ```bash
 conda activate ai_use
-python /Users/keith/Desktop/AI/codex/game-agent-poc/python-poc/harness.py --agent interactive --max-turns 30
+python python-poc/harness.py --agent interactive --max-turns 30
 ```
 
 如果想看 harness 的 debug 诊断：
 
 ```bash
 conda activate ai_use
-python /Users/keith/Desktop/AI/codex/game-agent-poc/python-poc/harness.py --agent ollama --model gemma4:e2b --max-turns 30 --debug
+python python-poc/harness.py --agent ollama --model gemma4:e2b --max-turns 30 --debug
 ```
 
 ## 测试
@@ -120,16 +124,11 @@ python -m unittest discover -s tests
 
 ## 参考背景
 
-这些是前面已经整理好的上游讨论和决策来源，后面写 POC 时不用重复造轮子：
-
-- [可行性分析](/Users/keith/Desktop/AI/CoPaw/workspaces/default/memory/raw/2026-05-27_game_agent_feasibility_report.md)
-- [Roadmap](/Users/keith/Desktop/AI/CoPaw/workspaces/default/memory/raw/2026-05-27_game_agent_roadmap.md)
-- [Sprint 0 调整版](/Users/keith/Desktop/AI/CoPaw/workspaces/default/memory/raw/2026-06-02_sprint0_adjusted.md)
-- [周报摘要](/Users/keith/Desktop/AI/CoPaw/workspaces/default/memory/curated/weekly_report_2026-06-02_2026-06-06.md)
-- [Phase 1 Plan](/Users/keith/Desktop/AI/codex/game-agent-poc/docs/phase1_plan.md)
-- [How To Play](/Users/keith/Desktop/AI/codex/game-agent-poc/python-poc/HOW_TO_PLAY.md)
-- [Agent Playbook](/Users/keith/Desktop/AI/codex/game-agent-poc/python-poc/AGENT_PLAYBOOK.md)
+- 阶段一计划见 [docs/phase1_plan.md](./docs/phase1_plan.md)
+- 对局说明见 [python-poc/HOW_TO_PLAY.md](./python-poc/HOW_TO_PLAY.md)
+- Agent 规则摘要见 [python-poc/AGENT_PLAYBOOK.md](./python-poc/AGENT_PLAYBOOK.md)
+- 游戏 POC 的说明和脚本索引见 [python-poc/README.md](./python-poc/README.md)
 
 ## 下一步
 
-接下来进入阶段一：先把胜利条件、资源博弈、随机先后手和最小 harness 定住，再继续迭代实现。
+接下来进入阶段一：继续优化对局可观测性和 debug trace，再做更细的 agent 分析。

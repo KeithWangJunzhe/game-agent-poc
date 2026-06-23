@@ -12,7 +12,7 @@
 
 ```bash
 conda activate ai_use
-python /Users/keith/Desktop/AI/codex/game-agent-poc/python-poc/analysis/single_match.py /path/to/match.json
+python python-poc/analysis/single_match.py /path/to/match.json
 ```
 
 加 `--json` 可直接输出结构化摘要。
@@ -21,7 +21,7 @@ python /Users/keith/Desktop/AI/codex/game-agent-poc/python-poc/analysis/single_m
 
 ```bash
 conda activate ai_use
-python /Users/keith/Desktop/AI/codex/game-agent-poc/python-poc/analysis/batch_analysis.py /path/to/matches
+python python-poc/analysis/batch_analysis.py /path/to/matches
 ```
 
 可以传单个文件、多个文件，或一个目录。加 `--json` 可输出聚合结果。
